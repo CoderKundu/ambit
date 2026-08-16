@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+public/audio/
+data/
+__pycache__/
+public/audio/

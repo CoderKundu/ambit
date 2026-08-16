@@ -1,0 +1,24 @@
+{
+  "name": "ambit",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "tsx scripts/test-logic.ts",
+    "eval": "python3 eval/evaluate.py"
+  },
+  "dependencies": {
+    "next": "^16.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}
