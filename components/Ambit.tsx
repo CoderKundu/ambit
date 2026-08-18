@@ -7,8 +7,8 @@ import { explain, summarise } from "../lib/explain";
 import { withDerivedBands } from "../lib/bands";
 import { artFor, paletteFor, themeFor, type Theme } from "../lib/theme";
 
-type Screen = "home" | "session" | "track";
-const REJECTS_KEY = "ambit.rejects.v1";
+type Screen = "home" | "session" | "track" | "saved";
+const SAVED_KEY = "ambit.saved.v1";
 
 export default function Ambit({ tracks }: { tracks: Track[] }) {
   // Tempo bands come from the shipped library, not from constants — see lib/bands.ts
@@ -35,9 +35,9 @@ export default function Ambit({ tracks }: { tracks: Track[] }) {
   // on refresh would make the re-weighting meaningless.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(REJECTS_KEY);
-      if (raw) setSaved(JSON.parse(raw).saved ?? []);
-    } catch { /* storage unavailable; the app works without it */ }
+      const raw = localStorage.getItem(SAVED_KEY);
+      if (raw) setSaved(JSON.parse(raw));
+    } catch { /* storage unavailable; the app still works, saves just don't persist */ }
   }, []);
 
   const pool = useMemo(
@@ -49,6 +49,13 @@ export default function Ambit({ tracks }: { tracks: Track[] }) {
     [pool, activeDials, mood],
   );
   const queue = useMemo(() => sequence(selectQueue(scored, 6)), [scored]);
+
+  // Saved tracks keep their original order (most recent last) and are scored
+  // against the current session, so opening one still explains itself.
+  const savedTracks = useMemo(
+    () => scoreAll(tracks.filter((t) => saved.includes(t.id)), activeDials, mood),
+    [tracks, saved, activeDials, mood],
+  );
 
   const playing = tracks.find((t) => t.id === nowPlaying) ?? null;
   const detail = detailId
@@ -101,10 +108,11 @@ export default function Ambit({ tracks }: { tracks: Track[] }) {
   const setDial = (key: keyof Dials, value: number) =>
     setDials({ ...activeDials, [key]: value });
 
+  /** Saves persist across visits — a list that empties on refresh isn't a list. */
   const toggleSave = (id: string) => {
     const next = saved.includes(id) ? saved.filter((x) => x !== id) : [...saved, id];
     setSaved(next);
-    try { localStorage.setItem(REJECTS_KEY, JSON.stringify({ saved: next })); } catch {}
+    try { localStorage.setItem(SAVED_KEY, JSON.stringify(next)); } catch {}
   };
 
   const fmt = (s: number) => {
@@ -116,7 +124,13 @@ export default function Ambit({ tracks }: { tracks: Track[] }) {
   // ---- render --------------------------------------------------------------
   return (
     <div style={{ background: theme.bg, color: theme.text, minHeight: "100vh", paddingBottom: 104, transition: "background .6s ease, color .6s ease" }}>
-      <Header theme={theme} onHome={() => setScreen("home")} onSession={() => setScreen("session")} />
+      <Header
+        theme={theme}
+        savedCount={saved.length}
+        onHome={() => setScreen("home")}
+        onSession={() => setScreen("session")}
+        onSaved={() => setScreen("saved")}
+      />
 
       {screen === "home" && (
         <Home moods={moods} onOpen={openMood} />
@@ -129,6 +143,17 @@ export default function Ambit({ tracks }: { tracks: Track[] }) {
           onSetDial={setDial} onPlay={play} onDismiss={dismiss}
           onOpenTrack={(id) => { setDetailId(id); setScreen("track"); }}
           onReset={() => { setDismissed([]); setDials(null); }}
+          onToggleSave={toggleSave}
+          saved={saved}
+        />
+      )}
+
+      {screen === "saved" && (
+        <Saved
+          tracks={savedTracks} mood={mood} theme={theme}
+          onPlay={play} onRemove={toggleSave}
+          onOpenTrack={(id) => { setDetailId(id); setScreen("track"); }}
+          onBrowse={() => setScreen("home")}
         />
       )}
 
@@ -156,7 +181,10 @@ export default function Ambit({ tracks }: { tracks: Track[] }) {
 
 // ---------------------------------------------------------------------------
 
-function Header({ theme, onHome, onSession }: { theme: Theme; onHome: () => void; onSession: () => void }) {
+function Header({ theme, savedCount, onHome, onSession, onSaved }: {
+  theme: Theme; savedCount: number;
+  onHome: () => void; onSession: () => void; onSaved: () => void;
+}) {
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 40, background: theme.bgFade, backdropFilter: "blur(14px)", borderBottom: `1px solid ${theme.line}` }}>
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 24px", height: 62, display: "flex", alignItems: "center", gap: 26 }}>
@@ -167,6 +195,15 @@ function Header({ theme, onHome, onSession }: { theme: Theme; onHome: () => void
         <nav style={{ display: "flex", gap: 2 }}>
           <button onClick={onHome} style={{ ...navBtn, color: theme.textSoft }}>Home</button>
           <button onClick={onSession} style={{ ...navBtn, color: theme.textSoft }}>Your session</button>
+          <button onClick={onSaved} style={{ ...navBtn, color: theme.textSoft, display: "flex", alignItems: "center", gap: 7 }}>
+            Saved
+            {savedCount > 0 && (
+              <span style={{ fontFamily: "var(--mono)", fontSize: 11, background: theme.chipStrong,
+                             color: theme.accentText, borderRadius: 999, padding: "1px 7px" }}>
+                {savedCount}
+              </span>
+            )}
+          </button>
         </nav>
       </div>
     </div>
@@ -215,6 +252,7 @@ function Session(props: {
   onSetDial: (k: keyof Dials, v: number) => void;
   onPlay: (id: string) => void; onDismiss: (t: Scored) => void;
   onOpenTrack: (id: string) => void; onReset: () => void;
+  onToggleSave: (id: string) => void; saved: string[];
 }) {
   const { mood, theme, dials, queue } = props;
   return (
@@ -280,9 +318,17 @@ function Session(props: {
               <div className="t-why" style={{ fontSize: 14.5, lineHeight: 1.55, color: theme.text2, borderLeft: `2px solid ${theme.rule}`, paddingLeft: 15, textWrap: "pretty" }}>
                 {explain(t, mood, i)}
               </div>
-              <div className="t-act" style={{ display: "flex", gap: 8 }}>
+              <div className="t-act" style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button onClick={() => props.onPlay(t.id)} style={{ ...pill, background: theme.chipStrong, color: theme.accentText }}>Play</button>
                 <button onClick={() => props.onDismiss(t)} style={{ ...pill, border: `1px solid ${theme.line2}`, color: theme.textMute, background: "transparent" }}>Not now</button>
+                <button
+                  onClick={() => props.onToggleSave(t.id)}
+                  aria-label={props.saved.includes(t.id) ? `Remove ${t.title} from saved` : `Save ${t.title}`}
+                  title={props.saved.includes(t.id) ? "Saved" : "Save"}
+                  style={{ ...btnReset, fontSize: 17, lineHeight: 1, padding: "6px 4px",
+                           color: props.saved.includes(t.id) ? theme.accent : theme.textMute }}>
+                  {props.saved.includes(t.id) ? "★" : "☆"}
+                </button>
               </div>
             </div>
           ))}
@@ -296,6 +342,70 @@ function Session(props: {
         </div>
       </div>
     </>
+  );
+}
+
+function Saved(props: {
+  tracks: Scored[]; mood: Mood; theme: Theme;
+  onPlay: (id: string) => void; onRemove: (id: string) => void;
+  onOpenTrack: (id: string) => void; onBrowse: () => void;
+}) {
+  const { tracks, mood, theme } = props;
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 24px 40px" }}>
+      <h1 style={{ fontFamily: "var(--mono)", fontSize: "clamp(26px,3.6vw,38px)", fontWeight: 300,
+                   letterSpacing: "-0.05em", margin: "0 0 8px", lineHeight: 1.06 }}>Saved</h1>
+      <div style={{ fontSize: 15, color: theme.textSoft, marginBottom: 34, maxWidth: "52ch" }}>
+        {tracks.length === 0
+          ? "Nothing saved yet."
+          : `${tracks.length} track${tracks.length === 1 ? "" : "s"}, kept in this browser. Match percentages are against ${mood.name}.`}
+      </div>
+
+      {tracks.length === 0 ? (
+        <div style={{ padding: "40px 0", borderTop: `1px solid ${theme.line}` }}>
+          <p style={{ fontSize: 15, color: theme.textSoft, maxWidth: "46ch", lineHeight: 1.6 }}>
+            Star a track in any session to keep it here. Saves live in this
+            browser only — there is no account, so clearing site data clears them.
+          </p>
+          <button onClick={props.onBrowse}
+            style={{ ...pill, marginTop: 8, background: theme.solid, color: theme.onSolid, padding: "11px 22px" }}>
+            Pick a moment
+          </button>
+        </div>
+      ) : (
+        <div>
+          {tracks.map((t, i) => (
+            <div key={t.id} className="trackrow" style={{ padding: "18px 0", borderBottom: `1px solid ${theme.line}` }}>
+              <button className="t-art" onClick={() => props.onOpenTrack(t.id)} aria-label={`Open ${t.title}`}
+                style={{ ...btnReset, width: 66, height: 66, borderRadius: 4, background: artFor(t, mood, i),
+                         boxShadow: "inset 0 0 0 1px oklch(0.5 0.02 250 / 0.14)" }} />
+              <button className="t-meta" onClick={() => props.onOpenTrack(t.id)}
+                style={{ ...btnReset, textAlign: "left", minWidth: 0, color: "inherit" }}>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 11, letterSpacing: "0.06em",
+                              color: t.match >= 70 ? theme.accentText : theme.textMute, marginBottom: 6 }}>
+                  {t.match}% match
+                </div>
+                <div style={{ fontSize: 16.5, fontWeight: 500, letterSpacing: "-0.014em" }}>{t.title}</div>
+                <div style={{ fontSize: 13.5, color: theme.textMute, marginTop: 2 }}>{t.artist}</div>
+              </button>
+              <div className="t-why" style={{ fontSize: 14.5, lineHeight: 1.55, color: theme.text2,
+                                              borderLeft: `2px solid ${theme.rule}`, paddingLeft: 15, textWrap: "pretty" }}>
+                {explain(t, mood, i)}
+              </div>
+              <div className="t-act" style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => props.onPlay(t.id)}
+                  style={{ ...pill, background: theme.chipStrong, color: theme.accentText }}>Play</button>
+                <button onClick={() => props.onRemove(t.id)}
+                  style={{ ...pill, border: `1px solid ${theme.line2}`, color: theme.textMute, background: "transparent" }}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
