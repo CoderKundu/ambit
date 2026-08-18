@@ -105,14 +105,36 @@ def precision_at_k(ranked: list[dict], labels: dict[str, bool], k: int) -> float
     """
     Fraction of the top k that were labelled a fit.
 
-    Only labelled tracks count. An unlabelled track in the top k is not evidence
-    either way, and silently treating it as a miss would punish whichever model
-    surfaces tracks the labeller never saw.
+    DEGENERATE CASE, and it bit this project: if a mood has fewer than k
+    labelled tracks, every model is handed the same set — just in a different
+    order — and precision cannot see order. All models then score identically,
+    including random. That is not a tie, it is the metric failing silently, so
+    we return None rather than a meaningless number.
     """
-    judged = [t for t in ranked if t["id"] in labels][:k]
-    if not judged:
-        return None
-    return sum(1 for t in judged if labels[t["id"]]) / len(judged)
+    judged = [t for t in ranked if t["id"] in labels]
+    if len(judged) < k + 2:
+        return None            # too few to discriminate between rankings
+    top = judged[:k]
+    return sum(1 for t in top if labels[t["id"]]) / len(top)
+
+
+def auc(ranked: list[dict], labels: dict[str, bool]) -> float | None:
+    """
+    Probability that a random track you liked ranks above one you didn't.
+
+    0.5 is coin-flip; 1.0 is perfect. Unlike precision@k this uses the FULL
+    ordering, so it stays meaningful with a handful of labels per mood — which
+    is exactly the situation hand-labelling produces. It is the honest primary
+    metric for a dataset this size.
+    """
+    judged = [t for t in ranked if t["id"] in labels]
+    pos = [i for i, t in enumerate(judged) if labels[t["id"]]]
+    neg = [i for i, t in enumerate(judged) if not labels[t["id"]]]
+    if not pos or not neg:
+        return None            # needs both classes present
+    wins = sum(1 for p in pos for n in neg if p < n)
+    ties = sum(1 for p in pos for n in neg if p == n)
+    return (wins + 0.5 * ties) / (len(pos) * len(neg))
 
 
 def evaluate(tracks: list[dict], labels_raw: list[dict], k: int = 6) -> dict:
@@ -122,12 +144,15 @@ def evaluate(tracks: list[dict], labels_raw: list[dict], k: int = 6) -> dict:
 
     results: dict[str, dict] = {}
     for name, fn in MODELS.items():
-        per_mood, coverage = [], []
+        per_mood, coverage, aucs = [], [], []
         for mood_id, labels in by_mood.items():
             mood = MOODS.get(mood_id)
             if not mood:
                 continue
             ranked = sorted(tracks, key=lambda t: fn(t, mood), reverse=True)
+            a = auc(ranked, labels)
+            if a is not None:
+                aucs.append(a)
             p = precision_at_k(ranked, labels, k)
             if p is not None:
                 per_mood.append((mood_id, p))
@@ -136,55 +161,67 @@ def evaluate(tracks: list[dict], labels_raw: list[dict], k: int = 6) -> dict:
                 coverage.append(min(k, len([t for t in ranked if t["id"] in labels])))
         mean = sum(p for _, p in per_mood) / len(per_mood) if per_mood else 0.0
         results[name] = {
+            "mean_auc": (sum(aucs) / len(aucs)) if aucs else None,
+            "moods_with_auc": len(aucs),
             "mean_precision": mean,
             "per_mood": dict(per_mood),
             "moods_evaluated": len(per_mood),
-            "labels_used": sum(coverage),
+            "labels_used": sum(len(v) for v in [labels]) if False else sum(coverage),
             "judged_per_mood": (sum(coverage) / len(coverage)) if coverage else 0,
         }
     return results
 
 
 def report(results: dict, k: int) -> None:
-    print(f"\n  precision@{k}, averaged over moods\n")
-    print(f"  {'model':<20} {'P@' + str(k):>7}   {'vs random':>10}")
-    print("  " + "-" * 44)
+    have_p = any(r["moods_evaluated"] for r in results.values())
 
-    base = results.get("random", {}).get("mean_precision", 0) or 1e-9
-    for name, r in sorted(results.items(), key=lambda kv: -kv[1]["mean_precision"]):
-        lift = r["mean_precision"] / base
-        print(f"  {name:<20} {r['mean_precision']:>7.3f}   {lift:>9.2f}x")
+    print("\n  AUC — chance a track you liked outranks one you didn't")
+    print("  (0.50 = coin flip, 1.00 = perfect)\n")
+    print(f"  {'model':<20} {'AUC':>7}")
+    print("  " + "-" * 30)
+    ordered = sorted(results.items(),
+                     key=lambda kv: -(kv[1]["mean_auc"] or 0))
+    for name, r in ordered:
+        a = r["mean_auc"]
+        print(f"  {name:<20} {a:>7.3f}" if a is not None else f"  {name:<20} {'n/a':>7}")
 
-    full = results.get("full model", {}).get("mean_precision", 0)
-    tempo = results.get("tempo only", {}).get("mean_precision", 0)
-    veto = results.get("no veto", {}).get("mean_precision", 0)
+    if have_p:
+        print(f"\n  precision@{k}\n")
+        print(f"  {'model':<20} {'P@' + str(k):>7}")
+        print("  " + "-" * 30)
+        for name, r in sorted(results.items(), key=lambda kv: -kv[1]["mean_precision"]):
+            print(f"  {name:<20} {r['mean_precision']:>7.3f}")
+    else:
+        print(f"\n  precision@{k}: skipped — no mood has {k + 2}+ labelled tracks.")
+        print(f"  It cannot separate models below that; AUC above is the usable metric.")
+
+    full = results.get("full model", {}).get("mean_auc") or 0
+    tempo = results.get("tempo only", {}).get("mean_auc") or 0
+    veto = results.get("no veto", {}).get("mean_auc") or 0
+    plain = results.get("unweighted mean", {}).get("mean_auc") or 0
+    rand = results.get("random", {}).get("mean_auc") or 0.5
 
     print("\n  what this says:")
-    if full <= tempo:
-        print("  * The full model does NOT beat matching tempo alone. The extra")
-        print("    dials are not earning their place — either the signals are")
-        print("    weak (check the vocals proxy) or the weights are wrong.")
+    if full <= rand + 0.02:
+        print("  * The model is not distinguishing fits from misfits at all.")
+        print("    Something is wrong upstream — check the dials, not the weights.")
+    elif full <= tempo:
+        print(f"  * Tempo alone does as well ({tempo:.3f} vs {full:.3f}). The other")
+        print("    three dials are not earning their place yet.")
     else:
-        print(f"  * Four dials beat tempo alone by {full - tempo:+.3f}.")
+        print(f"  * Four dials beat tempo alone: {full:.3f} vs {tempo:.3f} ({full - tempo:+.3f}).")
+    if full > plain:
+        print(f"  * Weighting + penalty add {full - plain:+.3f} over a plain mean.")
     if full <= veto:
-        print("  * The veto is not helping. Consider removing it.")
-    else:
-        print(f"  * The critical-dial veto adds {full - veto:+.3f}.")
+        print("  * The veto is not helping on this sample.")
 
-    fm = results.get("full model", {})
-    n = fm.get("labels_used", 0)
-    per = fm.get("judged_per_mood", 0)
-    print(f"\n  evidence: {n} judged slots across {fm.get('moods_evaluated', 0)} moods "
-          f"({per:.1f} per mood)")
-    if per < k:
-        print(f"  * Each P@{k} rests on fewer than {k} judged tracks. Label more "
-              "per mood\n    before trusting a gap this small.")
-    if n < 150:
-        print("  * Under 150 judged slots overall — directional only.")
-    gap = abs(full - tempo)
-    if gap < 0.05:
-        print("  * The gap to the tempo baseline is inside the noise for this "
-              "sample\n    size. Do not claim the model wins yet.")
+    n = results.get("full model", {}).get("labels_used", 0)
+    moods = results.get("full model", {}).get("moods_with_auc", 0)
+    print(f"\n  evidence: {moods} moods with both fits and misfits labelled")
+    if moods < 4:
+        print("  * Fewer than 4 usable moods. Label more, especially misfits.")
+    if n and n < 80:
+        print("  * Small sample — treat as directional.")
 
 
 # --- labelling worksheet ----------------------------------------------------

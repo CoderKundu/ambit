@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambit — labelling</title>
+<style>
+  :root { --ink:#1a1c1f; --mute:#6b7076; --line:#e3e6ea; --bg:#f5f7f9; --accent:#2f6fd0; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.55 ui-sans-serif,system-ui,-apple-system,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  .wrap { max-width:640px; margin:0 auto; padding:32px 20px 80px; }
+  .bar { height:4px; background:var(--line); border-radius:99px; overflow:hidden; margin-bottom:28px; }
+  .bar div { height:100%; background:var(--accent); transition:width .3s ease; }
+  .count { font:13px ui-monospace,monospace; color:var(--mute); margin-bottom:24px; }
+  .mood { font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin-bottom:10px; }
+  h1 { font-size:30px; font-weight:400; letter-spacing:-.02em; margin:0 0 10px; }
+  .desc { color:var(--mute); margin:0 0 30px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:24px; margin-bottom:24px; }
+  .title { font-size:19px; font-weight:500; margin-bottom:3px; }
+  .artist { color:var(--mute); font-size:14px; margin-bottom:18px; }
+  audio { width:100%; }
+  .q { text-align:center; font-size:17px; margin:28px 0 18px; }
+  .btns { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  button { font:inherit; padding:16px; border-radius:8px; border:1px solid var(--line);
+           background:#fff; cursor:pointer; transition:.15s; }
+  button:hover { transform:translateY(-1px); }
+  .yes { background:#12331f; color:#fff; border-color:#12331f; }
+  .no  { background:#fff; }
+  .skip { grid-column:1/-1; border:none; background:none; color:var(--mute); font-size:14px; padding:8px; }
+  .hint { text-align:center; font-size:13px; color:var(--mute); margin-top:16px; }
+  kbd { background:var(--line); border-radius:4px; padding:1px 6px; font:12px ui-monospace,monospace; }
+  .done { text-align:center; padding:50px 0; }
+  .done h2 { font-weight:400; font-size:26px; }
+  .stat { font:14px ui-monospace,monospace; color:var(--mute); margin:8px 0 26px; }
+  .dl { display:inline-block; background:var(--accent); color:#fff; border:none;
+        padding:14px 26px; border-radius:8px; cursor:pointer; }
+  .warn { background:#fff4e5; border:1px solid #ffd9a0; border-radius:8px;
+          padding:14px 16px; font-size:14px; margin-bottom:24px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">Loading…</div>
+
+<script>
+/*
+ * Blind labelling.
+ *
+ * Deliberately shows only the mood and the AUDIO — no dial values, no match
+ * score, no BPM. The first version of this tool displayed the dials, which was
+ * a methodological mistake: those are the model's own numbers, so judging by
+ * them asks whether the model agrees with itself rather than whether it agrees
+ * with a listener. Circular, and worthless as ground truth.
+ *
+ * Listen, decide, move on. Progress is kept in localStorage.
+ */
+
+const MOODS = {
+  "deep-focus":       "Two hours of work ahead. Nothing that pulls your attention — no lyrics you'd follow, no sudden changes.",
+  "late-night-drive": "Empty motorway, 1am. Low end, steady momentum, atmospheric.",
+  "sunday-morning":   "Slow start, nothing urgent. Warm and forgiving.",
+  "gym-push":         "Last four reps and it hurts. Loud, blunt, relentless.",
+  "rainy-commute":    "Headphones on, rain on the window, forty minutes to kill.",
+  "dinner-party":     "Six people talking. Music present but never competing.",
+  "long-haul-flight": "Nine hours, cabin drone, drifting in and out of sleep.",
+  "reset-after-work": "Decompressing. Nothing that demands a decision.",
+};
+
+const KEY = "ambit.labels.v2";
+let rows = [], i = 0;
+
+async function boot() {
+  let tracks;
+  try {
+    tracks = await (await fetch("/tracks.json")).json();
+  } catch {
+    document.getElementById("app").innerHTML =
+      "<p>Couldn't load /tracks.json. Run this from the dev server: <code>npm run dev</code>, then open <code>localhost:3000/label.html</code></p>";
+    return;
+  }
+
+  const saved = localStorage.getItem(KEY);
+  if (saved) {
+    rows = JSON.parse(saved);
+  } else {
+    rows = buildSample(tracks, 40);
+  }
+  i = rows.findIndex(r => r.fits === null);
+  if (i < 0) i = rows.length;
+  render();
+}
+
+/*
+ * Stratified sample: mostly tracks the model rates highly, but a quarter drawn
+ * from the middle and a quarter from the bottom. Labelling only the top would
+ * measure precision over a set the model picked for itself.
+ */
+function buildSample(tracks, n) {
+  const moods = Object.keys(MOODS);
+  const per = Math.max(4, Math.round(n / moods.length));
+  const out = [];
+
+  const DIALS = {
+    "deep-focus":       {e:34,w:52,t:40,v:12},
+    "late-night-drive": {e:62,w:38,t:62,v:34},
+    "sunday-morning":   {e:30,w:84,t:36,v:62},
+    "gym-push":         {e:94,w:30,t:88,v:58},
+    "rainy-commute":    {e:44,w:60,t:46,v:48},
+    "dinner-party":     {e:52,w:76,t:54,v:54},
+    "long-haul-flight": {e:26,w:46,t:30,v:20},
+    "reset-after-work": {e:38,w:68,t:42,v:44},
+  };
+
+  for (const m of moods) {
+    const d = DIALS[m];
+    const ranked = [...tracks].sort((a, b) => dist(a, d) - dist(b, d));
+    const top = ranked.slice(0, Math.ceil(per / 2));
+    const mid = sample(ranked.slice(Math.floor(ranked.length * .35), Math.floor(ranked.length * .65)), Math.floor(per / 4));
+    const low = sample(ranked.slice(-Math.floor(ranked.length * .25)), per - top.length - mid.length);
+    for (const t of [...top, ...mid, ...low]) {
+      out.push({ mood: m, track_id: t.id, title: t.title, artist: t.artist, audio: t.audio, fits: null });
+    }
+  }
+  return shuffle(out);
+}
+
+const dist = (t, d) => Math.abs(t.e-d.e)*1.15 + Math.abs(t.w-d.w)*.8 + Math.abs(t.t-d.t)*1.1 + Math.abs(t.v-d.v)*.75;
+const sample = (arr, k) => shuffle([...arr]).slice(0, Math.max(0, k));
+function shuffle(a) { for (let j=a.length-1;j>0;j--){const k=Math.floor(Math.random()*(j+1));[a[j],a[k]]=[a[k],a[j]];} return a; }
+
+function answer(v) {
+  rows[i].fits = v;
+  localStorage.setItem(KEY, JSON.stringify(rows));
+  i++;
+  render();
+}
+function skip() { i++; render(); }
+
+function render() {
+  const app = document.getElementById("app");
+  const done = rows.filter(r => r.fits !== null).length;
+
+  if (i >= rows.length) {
+    const yes = rows.filter(r => r.fits === true).length;
+    const no  = rows.filter(r => r.fits === false).length;
+    const lopsided = no === 0 || yes === 0;
+    app.innerHTML = `
+      <div class="done">
+        <h2>${done} labelled</h2>
+        <div class="stat">${yes} fit · ${no} don't</div>
+        ${lopsided ? `<div class="warn">Every answer was the same. Precision can't
+          distinguish any model from random on this — worth redoing, listening to each one.</div>` : ""}
+        <button class="dl" onclick="download()">Download labels.json</button>
+        <p class="hint">Save it to <code>eval/labels.json</code>, then run
+          <code>python3 eval/evaluate.py</code></p>
+        <p class="hint"><a href="#" onclick="localStorage.removeItem('${KEY}');location.reload()">start over</a></p>
+      </div>`;
+    return;
+  }
+
+  const r = rows[i];
+  app.innerHTML = `
+    <div class="bar"><div style="width:${(done / rows.length) * 100}%"></div></div>
+    <div class="count">${done} of ${rows.length}</div>
+    <div class="mood">${r.mood.replace(/-/g, " ")}</div>
+    <h1>Would you want this in that session?</h1>
+    <p class="desc">${MOODS[r.mood]}</p>
+    <div class="card">
+      <div class="title">${esc(r.title)}</div>
+      <div class="artist">${esc(r.artist)}</div>
+      <audio controls autoplay src="${r.audio}"></audio>
+    </div>
+    <div class="btns">
+      <button class="no"  onclick="answer(false)">No — wrong for this</button>
+      <button class="yes" onclick="answer(true)">Yes — fits</button>
+      <button class="skip" onclick="skip()">skip</button>
+    </div>
+    <p class="hint"><kbd>1</kbd> no · <kbd>2</kbd> yes · listen for a few seconds first</p>`;
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function download() {
+  const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "labels.json";
+  a.click();
+}
+
+addEventListener("keydown", e => {
+  if (i >= rows.length) return;
+  if (e.key === "1") answer(false);
+  if (e.key === "2") answer(true);
+});
+
+boot();
+</script>
+</body>
+</html>

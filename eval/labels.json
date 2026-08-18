@@ -1,0 +1,322 @@
+[
+  {
+    "mood": "rainy-commute",
+    "track_id": "jam1070219",
+    "title": "Mr.&Mrs Rains",
+    "artist": "Intoxicated Piano",
+    "audio": "/audio_preview/jam1070219.mp3",
+    "fits": true
+  },
+  {
+    "mood": "rainy-commute",
+    "track_id": "jam43030",
+    "title": "Purgatoire",
+    "artist": "A.n.K.h //",
+    "audio": "/audio_preview/jam43030.mp3",
+    "fits": true
+  },
+  {
+    "mood": "reset-after-work",
+    "track_id": "jam300667",
+    "title": "we are all so busy",
+    "artist": "Kismet",
+    "audio": "/audio_preview/jam300667.mp3",
+    "fits": true
+  },
+  {
+    "mood": "long-haul-flight",
+    "track_id": "jam1309602",
+    "title": "Winter Lounge",
+    "artist": "atw",
+    "audio": "/audio_preview/jam1309602.mp3",
+    "fits": true
+  },
+  {
+    "mood": "sunday-morning",
+    "track_id": "jam438056",
+    "title": "Kiss My Lips (radio version)",
+    "artist": "Kate Orange",
+    "audio": "/audio_preview/jam438056.mp3",
+    "fits": false
+  },
+  {
+    "mood": "gym-push",
+    "track_id": "jam81743",
+    "title": "space invaders",
+    "artist": "pornophonique",
+    "audio": "/audio_preview/jam81743.mp3",
+    "fits": false
+  },
+  {
+    "mood": "sunday-morning",
+    "track_id": "jam1132013",
+    "title": "Butterflies",
+    "artist": "Dee Yan-Key",
+    "audio": "/audio_preview/jam1132013.mp3",
+    "fits": true
+  },
+  {
+    "mood": "late-night-drive",
+    "track_id": "jam391010",
+    "title": "Heroines",
+    "artist": "Diablo Swing Orchestra",
+    "audio": "/audio_preview/jam391010.mp3",
+    "fits": true
+  },
+  {
+    "mood": "rainy-commute",
+    "track_id": "jam306165",
+    "title": "So Called Democracy",
+    "artist": "Stephane TV",
+    "audio": "/audio_preview/jam306165.mp3",
+    "fits": true
+  },
+  {
+    "mood": "reset-after-work",
+    "track_id": "jam43030",
+    "title": "Purgatoire",
+    "artist": "A.n.K.h //",
+    "audio": "/audio_preview/jam43030.mp3",
+    "fits": true
+  },
+  {
+    "mood": "dinner-party",
+    "track_id": "jam1221875",
+    "title": "I Dont Cry",
+    "artist": "A Virtual Friend",
+    "audio": "/audio_preview/jam1221875.mp3",
+    "fits": true
+  },
+  {
+    "mood": "dinner-party",
+    "track_id": "jam1419079",
+    "title": "The imagined last day of Crawford Gordon",
+    "artist": "BETP5",
+    "audio": "/audio_preview/jam1419079.mp3",
+    "fits": true
+  },
+  {
+    "mood": "deep-focus",
+    "track_id": "jam48963",
+    "title": "Celestia",
+    "artist": "Jaime Heras",
+    "audio": "/audio_preview/jam48963.mp3",
+    "fits": true
+  },
+  {
+    "mood": "dinner-party",
+    "track_id": "jam938331",
+    "title": "I'll Wait",
+    "artist": "Jonathan Dimmel",
+    "audio": "/audio_preview/jam938331.mp3",
+    "fits": true
+  },
+  {
+    "mood": "late-night-drive",
+    "track_id": "jam162032",
+    "title": "The Bottom",
+    "artist": "Josh Woodward",
+    "audio": "/audio_preview/jam162032.mp3",
+    "fits": true
+  },
+  {
+    "mood": "deep-focus",
+    "track_id": "jam1309301",
+    "title": "The Heat",
+    "artist": "Sam Garbett",
+    "audio": "/audio_preview/jam1309301.mp3",
+    "fits": true
+  },
+  {
+    "mood": "sunday-morning",
+    "track_id": "jam11216",
+    "title": "Beautiful Girl",
+    "artist": "Babypaul",
+    "audio": "/audio_preview/jam11216.mp3",
+    "fits": true
+  },
+  {
+    "mood": "rainy-commute",
+    "track_id": "jam1099703",
+    "title": "Divergence (Remastered VIP)",
+    "artist": "TheBlackParrot",
+    "audio": "/audio_preview/jam1099703.mp3",
+    "fits": true
+  },
+  {
+    "mood": "long-haul-flight",
+    "track_id": "jam111586",
+    "title": "foreplay",
+    "artist": "Efiel",
+    "audio": "/audio_preview/jam111586.mp3",
+    "fits": true
+  },
+  {
+    "mood": "gym-push",
+    "track_id": "jam1442030",
+    "title": "Peyote",
+    "artist": "Kinematic",
+    "audio": "/audio_preview/jam1442030.mp3",
+    "fits": false
+  },
+  {
+    "mood": "long-haul-flight",
+    "track_id": "jam1879434",
+    "title": "Meditation Healing 432Hz",
+    "artist": "RealTunesStudio",
+    "audio": "/audio_preview/jam1879434.mp3",
+    "fits": false
+  },
+  {
+    "mood": "sunday-morning",
+    "track_id": "jam1321406",
+    "title": "Horizons",
+    "artist": "Train Room",
+    "audio": "/audio_preview/jam1321406.mp3",
+    "fits": false
+  },
+  {
+    "mood": "long-haul-flight",
+    "track_id": "jam22518",
+    "title": "groovetrack#3",
+    "artist": "ioeo",
+    "audio": "/audio_preview/jam22518.mp3",
+    "fits": false
+  },
+  {
+    "mood": "reset-after-work",
+    "track_id": "jam24034",
+    "title": "The Dreamer's Overture",
+    "artist": "JT Bruce",
+    "audio": "/audio_preview/jam24034.mp3",
+    "fits": false
+  },
+  {
+    "mood": "reset-after-work",
+    "track_id": "jam246502",
+    "title": "Brake",
+    "artist": "Ades Vapor",
+    "audio": "/audio_preview/jam246502.mp3",
+    "fits": true
+  },
+  {
+    "mood": "dinner-party",
+    "track_id": "jam43030",
+    "title": "Purgatoire",
+    "artist": "A.n.K.h //",
+    "audio": "/audio_preview/jam43030.mp3",
+    "fits": true
+  },
+  {
+    "mood": "reset-after-work",
+    "track_id": "jam124363",
+    "title": "raining at the crescent house",
+    "artist": "Williamson",
+    "audio": "/audio_preview/jam124363.mp3",
+    "fits": true
+  },
+  {
+    "mood": "gym-push",
+    "track_id": "jam1666842",
+    "title": "Empty Reef",
+    "artist": "Dorian Luthier",
+    "audio": "/audio_preview/jam1666842.mp3",
+    "fits": true
+  },
+  {
+    "mood": "late-night-drive",
+    "track_id": "jam978984",
+    "title": "Here I am",
+    "artist": "Ralf G. (Ralf Gründer)",
+    "audio": "/audio_preview/jam978984.mp3",
+    "fits": true
+  },
+  {
+    "mood": "deep-focus",
+    "track_id": "jam150395",
+    "title": "Changing My Mind",
+    "artist": "Can't Stop The Daggers",
+    "audio": "/audio_preview/jam150395.mp3",
+    "fits": true
+  },
+  {
+    "mood": "long-haul-flight",
+    "track_id": "jam1097943",
+    "title": "Turn The Lights On",
+    "artist": "Fresh Body Shop",
+    "audio": "/audio_preview/jam1097943.mp3",
+    "fits": false
+  },
+  {
+    "mood": "late-night-drive",
+    "track_id": "jam366748",
+    "title": "Make Believe",
+    "artist": "Felixjd",
+    "audio": "/audio_preview/jam366748.mp3",
+    "fits": false
+  },
+  {
+    "mood": "deep-focus",
+    "track_id": "jam1309602",
+    "title": "Winter Lounge",
+    "artist": "atw",
+    "audio": "/audio_preview/jam1309602.mp3",
+    "fits": false
+  },
+  {
+    "mood": "sunday-morning",
+    "track_id": "jam1217479",
+    "title": "Paris La Nuit",
+    "artist": "A Virtual Friend",
+    "audio": "/audio_preview/jam1217479.mp3",
+    "fits": false
+  },
+  {
+    "mood": "dinner-party",
+    "track_id": "jam1428768",
+    "title": "Bye Bye Bluebird",
+    "artist": "Barefoot McCoy",
+    "audio": "/audio_preview/jam1428768.mp3",
+    "fits": false
+  },
+  {
+    "mood": "gym-push",
+    "track_id": "jam46048",
+    "title": "Salsa di Soy (FabiuS remix)",
+    "artist": "Boom Boom Beckett",
+    "audio": "/audio_preview/jam46048.mp3",
+    "fits": true
+  },
+  {
+    "mood": "late-night-drive",
+    "track_id": "jam887203",
+    "title": "No Words (Director's Cut)",
+    "artist": "WE ARE FM",
+    "audio": "/audio_preview/jam887203.mp3",
+    "fits": true
+  },
+  {
+    "mood": "gym-push",
+    "track_id": "jam1982365",
+    "title": "Abstract Ideas",
+    "artist": "DHDMusic",
+    "audio": "/audio_preview/jam1982365.mp3",
+    "fits": true
+  },
+  {
+    "mood": "rainy-commute",
+    "track_id": "jam124363",
+    "title": "raining at the crescent house",
+    "artist": "Williamson",
+    "audio": "/audio_preview/jam124363.mp3",
+    "fits": true
+  },
+  {
+    "mood": "deep-focus",
+    "track_id": "jam1097943",
+    "title": "Turn The Lights On",
+    "artist": "Fresh Body Shop",
+    "audio": "/audio_preview/jam1097943.mp3",
+    "fits": false
+  }
+]
