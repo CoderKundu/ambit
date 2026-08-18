@@ -9,7 +9,7 @@ that reason is computed from the same numbers that produced the ranking.
 <!-- Put a screenshot here. For a lot of reviewers it is the only thing they read. -->
 ![Ambit session view](docs/screenshot.png)
 
-**[Live demo](https://your-deploy-url.vercel.app)** · no login, no account, plays in the browser
+**[Live demo](https://ambit-mu.vercel.app/)** · no login, no account, plays in the browser
 
 ---
 
